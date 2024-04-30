@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+#  ╔╗ ╔═╗╔═╗╦ ╦╔╦╗  - z0mbi3
+#  ╠╩╗╚═╗╠═╝║║║║║║  - https://github.com/gh0stzk/dotfiles
+#  ╚═╝╚═╝╩  ╚╩╝╩ ╩  - z0mbi3.zk@protonmail.com
+
+
+#  ┬┌┬┐┌─┐┌─┐┬─┐┌┬┐┌─┐┌┐┌┌┬┐  ┬  ┬┌─┐┬─┐┬┌─┐┌┐ ┬  ┌─┐┌─┐
+#  ││││├─┘│ │├┬┘ │ ├─┤│││ │   └┐┌┘├─┤├┬┘│├─┤├┴┐│  ├┤ └─┐
+#  ┴┴ ┴┴  └─┘┴└─ ┴ ┴ ┴┘└┘ ┴    └┘ ┴ ┴┴└─┴┴ ┴└─┘┴─┘└─┘└─┘
+
+PATH="$HOME/.config/bspwm/scripts:$PATH"
+
+## Fix java applications
+export _JAVA_AWT_WM_NONREPARENTING=1
+
+#  ┌─┐┬ ┬┌┐┌┌─┐┌┬┐┬┌─┐┌┐┌┌─┐
+#  ├┤ │ │││││   │ ││ ││││└─┐
+#  └  └─┘┘└┘└─┘ ┴ ┴└─┘┘└┘└─┘
+
+function get_values() {
+DEFNETWORK=$(ip route | grep '^default' | awk '{print $5}' | head -n1)
+CARD=$(ls -1 /sys/class/backlight/)
+power_supply_files=$(ls /sys/class/power_supply/)
+
+for file in $power_supply_files
+do
+	if [ -e "/sys/class/power_supply/$file/capacity" ]; then
+		battery_file=$file
+    fi
+
+    if [ -e "/sys/class/power_supply/$file/online" ]; then
+        adapter_file=$file
+    fi
+done
+
+BATTERY="$battery_file"
+ADAPTER="$adapter_file"
+}
+
+set_values() {
+	if [[ "$DEFNETWORK" ]]; then
+		sed -i -e "s/sys_network_interface = .*/sys_network_interface = $DEFNETWORK/g" $HOME/.config/bspwm/scripts/system.ini
+	fi
+	if [[ "$ADAPTER" ]]; then
+		sed -i -e "s/sys_adapter = .*/sys_adapter = $ADAPTER/g" $HOME/.config/bspwm/scripts/system.ini
+	fi
+	if [[ "$BATTERY" ]]; then
+		sed -i -e "s/sys_battery = .*/sys_battery = $BATTERY/g" $HOME/.config/bspwm/scripts/system.ini
+	fi
+	if [[ "$CARD" ]]; then
+		sed -i -e "s/sys_graphics_card = .*/sys_graphics_card = $CARD/g" $HOME/.config/bspwm/scripts/system.ini
+	fi
+}
+
+if [[ ! -f "$SFILE" ]]; then
+	get_values
+	set_values
+	touch $HOME/.config/bspwm/scripts/.sys
+fi
+
+#  ┬ ┬┌─┐┬─┐┬┌─┌─┐┌─┐┌─┐┌─┐┌─┐┌─┐
+#  ││││ │├┬┘├┴┐└─┐├─┘├─┤│  ├┤ └─┐
+#  └┴┘└─┘┴└─┴ ┴└─┘┴  ┴ ┴└─┘└─┘└─┘
+
+workspaces() {
+	name=1
+	for monitor in $(bspc query -M); do
+		bspc monitor "${monitor}" -n "$name" -d '1' '2' '3' '4' '5' '6'
+		#bspc monitor ${monitor} -n "$name" -d '' '' '' '' '' ''
+		(( name++ ))
+	done
+}
+
+workspaces
+
+
+
+# set root pointer
+xsetroot -cursor_name left_ptr
+
+#picom 
+pkill picom
+picom -b &
+#picom --expiremental-backends --no-use-damage &
+
+
+
+# panel
+#tint2 &
+$HOME/.config/polybar/launch.sh &
+
+
+# key bindings
+sxhkd -c "$HOME/.config/sxhkd/sxhkdrc" &
+
+# set some bsp specific
+#bspc monitor -d I II III IV V VI VII VIII IX X
+
+bspc config window_gap 10
+bspc config border_width 1
+
+bspc config split_ratio 0.5
+bspc config borderless_monocle true
+bspc config gapless_monocle true
+
+bspc config pointer_modifier mod1
+bspc config pointer_action1 move
+bspc config pointer_action2 resize_side
+bspc config pointer_action2 resize_corner
+
+bspc config normal_border_color "#484848"
+bspc config focused_border_color "#1F8999"
+bspc config urgent_border_color "#B58900"
+bspc config presel_border_color "#26E2FF"
+
+bspc rule -a dmengine state=floating sticky
+
+feh --bg-scale ~/BackGrounds/BackGround.jpeg
